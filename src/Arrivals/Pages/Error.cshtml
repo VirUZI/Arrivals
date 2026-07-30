@@ -1,0 +1,14 @@
+@page
+@model ErrorModel
+@{
+    ViewData["Title"] = "Error";
+}
+<section class="error-page">
+    <p class="eyebrow">Request failed</p>
+    <h1>Arrivals could not be rendered.</h1>
+    <p>Check the application log and the configured upstream URLs.</p>
+    @if (Model.ShowRequestId)
+    {
+        <p><code>@Model.RequestId</code></p>
+    }
+</section>

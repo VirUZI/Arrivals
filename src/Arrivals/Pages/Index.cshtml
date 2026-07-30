@@ -1,0 +1,236 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Recent and upcoming";
+}
+
+<section class="page-heading">
+    <div>
+        <p class="eyebrow">Arrivals</p>
+        <h1>Recent and upcoming</h1>
+        <p class="lede">
+            Unwatched movies and TV episodes, enriched with acquisition and library state.
+        </p>
+    </div>
+    <div class="range-summary">
+        <strong>@Model.Result.FromDate.ToString("dd MMM")</strong>
+        <span>through</span>
+        <strong>@Model.Result.ToDate.ToString("dd MMM yyyy")</strong>
+    </div>
+</section>
+
+@if (TempData["Success"] is string success)
+{
+    <div class="notice success">@success</div>
+}
+
+@if (Model.Result.Warnings.Count > 0)
+{
+    <details class="notice warning">
+        <summary>@Model.Result.Warnings.Count upstream warning(s)</summary>
+        <ul>
+            @foreach (var warning in Model.Result.Warnings)
+            {
+                <li>@warning</li>
+            }
+        </ul>
+    </details>
+}
+
+<form method="get" class="filters">
+    <label>
+        <span>Past days</span>
+        <input asp-for="PastDays" type="number" min="0" max="3650" />
+    </label>
+    <label>
+        <span>Future days</span>
+        <input asp-for="FutureDays" type="number" min="0" max="3650" />
+    </label>
+    <label>
+        <span>Media</span>
+        <select asp-for="MediaType">
+            <option value="all">Movies + TV</option>
+            <option value="tv">TV episodes</option>
+            <option value="movie">Movies</option>
+        </select>
+    </label>
+    <label>
+        <span>Acquisition</span>
+        <select asp-for="Availability">
+            <option value="all">All</option>
+            <option value="acquired">Acquired</option>
+            <option value="missing">Missing</option>
+        </select>
+    </label>
+    <label class="check-filter">
+        <input asp-for="IncludeWatched" />
+        <span>Include watched</span>
+        
+        <input asp-for="IncludeSpecials" />
+        <span>Include specials</span>
+    </label>
+    <div class="filter-actions">
+        <button type="submit" class="primary">Apply</button>
+        <button type="submit" name="ForceRefresh" value="true" class="secondary">
+            Refresh APIs
+        </button>
+    </div>
+</form>
+
+<div class="table-shell">
+    <table class="arrivals-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Title</th>
+                <th>Release</th>
+                <th class="icon-column" title="Downloaded according to Sonarr/Radarr">A</th>
+                <th class="icon-column" title="Present in Jellyfin">J</th>
+                <th class="icon-column" title="Watched according to Yamtrack">W</th>
+                <th>Open</th>
+            </tr>
+        </thead>
+        <tbody>
+        @if (Model.Result.Items.Count == 0)
+        {
+            <tr>
+                <td colspan="8" class="empty-state">Nothing matches the current filters.</td>
+            </tr>
+        }
+        else
+        {
+            @foreach (var item in Model.Result.Items)
+            {
+                <tr class="@Model.GetRowClass(item)">
+                    <td class="date-cell">@Model.FormatDate(item.ReleaseAt!.Value)</td>
+                    <td>
+                        <span class="type-pill">@(item.Key.Kind == ArrivalMediaKind.Movie ? "MOVIE" : "TV")</span>
+                    </td>
+                    <td>
+                        <div class="title-line">
+                            <strong>@item.Title</strong>
+                        </div>
+                        @if (item.Key.Kind == ArrivalMediaKind.Episode &&
+                             !string.IsNullOrWhiteSpace(item.EpisodeTitle))
+                        {
+                            <div class="muted">@item.EpisodeTitle</div>
+                        }
+                        else if (item.Key.Kind == ArrivalMediaKind.Movie)
+                        {
+                            <div class="muted">@Model.FormatMovieDates(item)</div>
+                        }
+                    </td>
+                    <td class="release-cell">
+                        @if (item.Key.Kind == ArrivalMediaKind.Episode)
+                        {
+                            <span class="episode-code">@item.EpisodeCode</span>
+                        }
+                        else
+                        {
+                            <span>@item.ReleaseLabel</span>
+                        }
+                    </td>
+                    <td class="icon-column">
+                        @if (item.Acquired == true)
+                        {
+                            <span class="state yes" title="Downloaded">✓</span>
+                        }
+                        else if (item.Acquired == false)
+                        {
+                            <span class="state no" title="Tracked, no file">–</span>
+                        }
+                        else
+                        {
+                            <span class="state unknown" title="Not matched to Sonarr/Radarr">?</span>
+                        }
+                    </td>
+                    <td class="icon-column">
+                        @if (item.InJellyfin == true)
+                        {
+                            <span class="state yes" title="In Jellyfin">✓</span>
+                        }
+                        else if (item.InJellyfin == false)
+                        {
+                            <span class="state no" title="Not in Jellyfin">–</span>
+                        }
+                        else
+                        {
+                            <span class="state unknown" title="Jellyfin check disabled or unavailable">?</span>
+                        }
+                    </td>
+                    <td class="icon-column">
+                        @if (item.Watched)
+                        {
+                            <span class="watch-box checked" title="Watched">✓</span>
+                        }
+                        else if (item.Key.Kind == ArrivalMediaKind.Episode &&
+                                 Model.EpisodeMarkWatchedEnabled)
+                        {
+                            <form method="post" asp-page-handler="MarkEpisodeWatched" class="inline-form">
+                                <input type="hidden" name="source" value="@item.Key.Source" />
+                                <input type="hidden" name="mediaId" value="@item.Key.MediaId" />
+                                <input type="hidden" name="seasonNumber" value="@item.Key.SeasonNumber" />
+                                <input type="hidden" name="episodeNumber" value="@item.Key.EpisodeNumber" />
+                                <input type="hidden" asp-for="PastDays" />
+                                <input type="hidden" asp-for="FutureDays" />
+                                <input type="hidden" asp-for="IncludeWatched" />
+                                <input type="hidden" asp-for="MediaType" />
+                                <input type="hidden" asp-for="Availability" />
+                                <button type="submit" class="watch-box" title="Mark episode watched in Yamtrack">
+                                    <span class="visually-hidden">Mark episode watched</span>
+                                </button>
+                            </form>
+                        }
+                        else if (item.Key.Kind == ArrivalMediaKind.Movie &&
+                                 item.Key.Source == "tmdb" &&
+                                 Model.MovieMarkWatchedEnabled)
+                        {
+                            <form method="post" asp-page-handler="MarkMovieWatched" class="inline-form">
+                                <input type="hidden" name="tmdbId" value="@item.Key.MediaId" />
+                                <input type="hidden" asp-for="PastDays" />
+                                <input type="hidden" asp-for="FutureDays" />
+                                <input type="hidden" asp-for="IncludeWatched" />
+                                <input type="hidden" asp-for="MediaType" />
+                                <input type="hidden" asp-for="Availability" />
+                                <button type="submit" class="watch-box" title="Mark watched in Yamtrack">
+                                    <span class="visually-hidden">Mark watched</span>
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span class="watch-box disabled"
+                                  title="Mark-watched action is disabled"></span>
+                        }
+                    </td>
+                    <td>
+                        <div class="links">
+                            @if (item.YamtrackUrl is not null)
+                            {
+                                <a href="@item.YamtrackUrl" target="_blank" rel="noreferrer">Y</a>
+                            }
+                            @if (item.SonarrUrl is not null)
+                            {
+                                <a href="@item.SonarrUrl" target="_blank" rel="noreferrer">S</a>
+                            }
+                            @if (item.RadarrUrl is not null)
+                            {
+                                <a href="@item.RadarrUrl" target="_blank" rel="noreferrer">R</a>
+                            }
+                            @if (item.JellyfinUrl is not null)
+                            {
+                                <a href="@item.JellyfinUrl" target="_blank" rel="noreferrer">J</a>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        }
+        </tbody>
+    </table>
+</div>
+
+<p class="footnote">
+    Generated @Model.Result.GeneratedAt.ToString("u"). Movie and episode watch actions depend on the configured Yamtrack API capabilities.
+</p>

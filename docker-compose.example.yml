@@ -1,0 +1,45 @@
+name: arrivals
+
+services:
+  arrivals:
+    image: arrivals:latest
+    build: .
+    container_name: arrivals
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8095:8080"
+    environment:
+      TZ: Europe/Stockholm
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: true
+      Dashboard__PastDays: 30
+      Dashboard__FutureDays: 90
+      Dashboard__CacheMinutes: 10
+      Dashboard__TimeZoneId: Europe/Stockholm
+      Dashboard__MovieDatePreference: DigitalThenCinema
+      Dashboard__EnableMovieMarkWatched: true
+
+      Yamtrack__BaseUrl: http://yamtrack:8000/
+      Yamtrack__ApiKey: ${YAMTRACK_API_KEY}
+      Yamtrack__PublicBaseUrl: https://yamtrack.lan/
+
+      Sonarr__BaseUrl: http://sonarr:8989/
+      Sonarr__ApiKey: ${SONARR_API_KEY}
+      Sonarr__PublicBaseUrl: https://sonarr.lan/
+
+      Radarr__BaseUrl: http://radarr:7878/
+      Radarr__ApiKey: ${RADARR_API_KEY}
+      Radarr__PublicBaseUrl: https://radarr.lan/
+
+      Jellyfin__Enabled: false
+      Jellyfin__BaseUrl: http://jellyfin:8096/
+      Jellyfin__ApiKey: ${JELLYFIN_API_KEY:-}
+      Jellyfin__PublicBaseUrl: https://jellyfin.lan/
+      Jellyfin__UserId: ${JELLYFIN_USER_ID:-}
+    # Put the container on the same Docker network as the services above,
+    # or replace the hostnames with routable LAN names.
+    networks:
+      - media
+
+networks:
+  media:
+    external: true

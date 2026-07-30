@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>@ViewData["Title"] · Arrivals</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="site-header">
+        <div class="shell header-inner">
+            <a class="brand" asp-page="/Index">Arrivals</a>
+            <span class="tagline">Yamtrack · Sonarr · Radarr · Jellyfin</span>
+        </div>
+    </header>
+    <main class="shell">
+        @RenderBody()
+    </main>
+</body>
+</html>
