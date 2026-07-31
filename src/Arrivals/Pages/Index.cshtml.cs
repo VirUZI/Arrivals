@@ -177,6 +177,17 @@ public sealed class IndexModel : PageModel
         return string.Join(" · ", parts);
     }
 
+    public string GetStatus(ArrivalItem item) =>
+        item.Watched
+            ? "WATCHED"
+            : item.InJellyfin == true
+                ? "AVAILABLE"
+                : item.Acquired == true
+                    ? "DOWNLOADED"
+                    : item.Acquired == false
+                        ? "MISSING"
+                        : "UNKNOWN";
+
     private void AddDate(List<string> parts, string label, DateTimeOffset? value)
     {
         if (value is not null)

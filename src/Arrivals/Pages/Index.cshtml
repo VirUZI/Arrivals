@@ -12,7 +12,7 @@
             Unwatched movies and TV episodes, enriched with acquisition and library state.
         </p>
     </div>
-    <div class="range-summary">
+    <div class="range-summary" id="arrivals-range">
         <strong>@Model.Result.FromDate.ToString("dd MMM")</strong>
         <span>through</span>
         <strong>@Model.Result.ToDate.ToString("dd MMM yyyy")</strong>
@@ -24,20 +24,7 @@
     <div class="notice success">@success</div>
 }
 
-@if (Model.Result.Warnings.Count > 0)
-{
-    <details class="notice warning">
-        <summary>@Model.Result.Warnings.Count upstream warning(s)</summary>
-        <ul>
-            @foreach (var warning in Model.Result.Warnings)
-            {
-                <li>@warning</li>
-            }
-        </ul>
-    </details>
-}
-
-<form method="get" class="filters">
+<form method="get" class="filters" data-arrivals-filters>
     <label>
         <span>Past days</span>
         <input asp-for="PastDays" type="number" min="0" max="3650" />
@@ -62,29 +49,47 @@
             <option value="missing">Missing</option>
         </select>
     </label>
-    <label class="check-filter">
-        <input asp-for="IncludeWatched" />
-        <span>Include watched</span>
-        
-        <input asp-for="IncludeSpecials" />
-        <span>Include specials</span>
-    </label>
+    <div class="check-filter">
+        <label class="check-option">
+            <input asp-for="IncludeWatched" />
+            <span>Include watched</span>
+        </label>
+        <label class="check-option">
+            <input asp-for="IncludeSpecials" />
+            <span>Include specials</span>
+        </label>
+    </div>
     <div class="filter-actions">
-        <button type="submit" class="primary">Apply</button>
+        <span class="filter-progress" data-filter-progress role="status" aria-live="polite"></span>
         <button type="submit" name="ForceRefresh" value="true" class="secondary">
             Refresh APIs
         </button>
     </div>
 </form>
 
-<div class="table-shell">
-    <table class="arrivals-table">
+<div id="arrivals-results" aria-live="polite">
+    @if (Model.Result.Warnings.Count > 0)
+    {
+        <details class="notice warning">
+            <summary>@Model.Result.Warnings.Count upstream warning(s)</summary>
+            <ul>
+                @foreach (var warning in Model.Result.Warnings)
+                {
+                    <li>@warning</li>
+                }
+            </ul>
+        </details>
+    }
+
+    <div class="table-shell">
+        <table class="arrivals-table">
         <thead>
             <tr>
                 <th>Date</th>
-                <th>Type</th>
+                <th class="media-column">Type</th>
                 <th>Title</th>
                 <th>Release</th>
+                <th class="status-column">Status</th>
                 <th class="icon-column" title="Downloaded according to Sonarr/Radarr">A</th>
                 <th class="icon-column" title="Present in Jellyfin">J</th>
                 <th class="icon-column" title="Watched according to Yamtrack">W</th>
@@ -95,17 +100,38 @@
         @if (Model.Result.Items.Count == 0)
         {
             <tr>
-                <td colspan="8" class="empty-state">Nothing matches the current filters.</td>
+                <td colspan="9" class="empty-state">Nothing matches the current filters.</td>
             </tr>
         }
         else
         {
             @foreach (var item in Model.Result.Items)
             {
-                <tr class="@Model.GetRowClass(item)">
+                var status = Model.GetStatus(item);
+                <tr class="arrival-row @Model.GetRowClass(item)" data-arrival-id="@item.Key.StableId">
                     <td class="date-cell">@Model.FormatDate(item.ReleaseAt!.Value)</td>
-                    <td>
-                        <span class="type-pill">@(item.Key.Kind == ArrivalMediaKind.Movie ? "MOVIE" : "TV")</span>
+                    <td class="media-column">
+                        @if (item.Key.Kind == ArrivalMediaKind.Movie)
+                        {
+                            <span class="media-icon" title="Movie">
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                                    <path d="M7 4v16M17 4v16M3 9h4M17 9h4M3 15h4M17 15h4"></path>
+                                </svg>
+                                <span class="visually-hidden">Movie</span>
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="media-icon" title="TV episode">
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="m8 3 4 3 4-3"></path>
+                                    <rect x="3" y="6" width="18" height="14" rx="2"></rect>
+                                    <path d="M8 23h8"></path>
+                                </svg>
+                                <span class="visually-hidden">TV episode</span>
+                            </span>
+                        }
                     </td>
                     <td>
                         <div class="title-line">
@@ -130,6 +156,9 @@
                         {
                             <span>@item.ReleaseLabel</span>
                         }
+                    </td>
+                    <td class="status-column">
+                        <span class="arrival-status status-@status.ToLowerInvariant()">@status</span>
                     </td>
                     <td class="icon-column">
                         @if (item.Acquired == true)
@@ -228,9 +257,10 @@
             }
         }
         </tbody>
-    </table>
-</div>
+        </table>
+    </div>
 
-<p class="footnote">
-    Generated @Model.Result.GeneratedAt.ToString("u"). Movie and episode watch actions depend on the configured Yamtrack API capabilities.
-</p>
+    <p class="footnote">
+        Generated @Model.Result.GeneratedAt.ToString("u"). Movie and episode watch actions depend on the configured Yamtrack API capabilities.
+    </p>
+</div>
