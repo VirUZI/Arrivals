@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Arrivals</title>
+  <rect width="64" height="64" rx="12" fill="#10272d"/>
+  <path
+    fill="#ffe27a"
+    fill-rule="evenodd"
+    d="M32 8 55 54H44l-5-11H25l-5 11H9L32 8Zm0 19-4 9h8l-4-9Z"/>
+  <path
+    d="M7 58h14m22 0h14"
+    fill="none"
+    stroke="#77c6d2"
+    stroke-linecap="round"
+    stroke-width="3"/>
+</svg>
