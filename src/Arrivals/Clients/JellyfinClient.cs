@@ -27,7 +27,10 @@ public sealed class JellyfinClient
         _http.Timeout = TimeSpan.FromSeconds(Math.Max(5, _options.TimeoutSeconds));
         if (!string.IsNullOrWhiteSpace(_options.ApiKey))
         {
-            _http.DefaultRequestHeaders.TryAddWithoutValidation("X-Emby-Token", _options.ApiKey);
+            _http.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue(
+                    "MediaBrowser",
+                    $"Token=\"{Uri.EscapeDataString(_options.ApiKey)}\"");
         }
     }
 
